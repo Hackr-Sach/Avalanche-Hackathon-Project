@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -17,18 +17,29 @@ contract CPRinstance is ERC20, Ownable {
   uint256 private constant TOTAL_SUPPLY = 1200 * (uint(10) ** uint8(18));
   uint256 private constant PRICE = 1; // testing price
   
-  // how do we want to resolve the actual report a text base mechanism??
+  // issues are used to raise awareness of an event of some kind primarily.
+  // We can think of these as calling for everyones attention or raising the alarm.
   // a struct defining an issue which people may vote.
   struct IssueReport {
     address issuer; // address of the user making the report
     uint issueID; // make id = array index?
-    uint yay; // talley of votes for
+    uint yay; // talley of votes for **Note still deciding on how votes work here. could be that they play into slashing
     uint nay; // talley of votes against.
     bool slash; // determines if a user gets slashed or not, happens when systems abused..[EXPERIMENTAL]
     bool alarmLow; // low level warning
     bool alarmHigh; // high level warning look at this now!
   }
-
+  // ** Figure out how we want to handle proposals. Most likely ipfs but do we need to tokenize them?
+  // Proposals are changes to governance metrics. Such as changing
+  // distribution, value, new comitees, tbd/etc
+  // a struct defining a propposal
+  struct Proposal {
+    address issuer; // address of the user making the report
+    uint issueID; // make id = array index?
+    uint yay; // talley of votes for **Note still deciding on how votes work here. could be that they play into slashing
+    uint nay; // talley of votes against.
+    bool slash; // determines if a user gets slashed or not [EXPERIMENTAL]
+  }
   mapping(address=>IssueReport[]) ManagingIssueReports;
  
   // we will feed this constructor with report data
@@ -52,9 +63,9 @@ contract CPRinstance is ERC20, Ownable {
   // we'll use avax as the currency to purchase shares.
   // User enters number of shares and pays the total price in avax.
   function buyShares(uint quantity) public payable {
-    require(msg.value == (quantity * PRICE) * (uint(10) ** uint8(18))), "Not enough funds");
-    require(balanceOf(address(this)) >= quantity, "Insufficient resources");
-    transferFrom(address(this), msg.sender, quantity);
+    require(msg.value == (quantity * PRICE) * (uint(10) ** uint8(18)), "Not enough funds"); //1000000000000000000 = 1
+    require(balanceOf(address(this)) >= 1000000000000000000, "Insufficient resources");
+    this.transfer(payable(msg.sender), quantity * (uint(10) ** uint8(18)));
   }
 
   // a function to create issues which people may vote/act on the base for the openIssue public function.
@@ -113,11 +124,16 @@ contract CPRinstance is ERC20, Ownable {
     // set roles if any
   }
 
-  // a function to releaase avax stored on a contract.
-  function releaseAVAX(address payable recipient, uint256 amount) public payable onlyOwner{
-    (bool succeed, bytes memory data) = recipient.call{value: amount}("");
+  // a testing function to releaase avax stored on contract.
+  function releaseAVAX(uint amount) public payable onlyOwner{
+    (bool succeed, bytes memory data) = payable(msg.sender).call{value: amount}("");
     require(succeed, "Failed to withdraw AVAX");
   }
 
+  function setMyAllowance(address spender, uint addedValue) public {
+    increaseAllowance(spender, addedValue);
+  }
   receive() external payable {}
+
 }
+
