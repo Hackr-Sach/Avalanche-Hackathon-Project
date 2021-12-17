@@ -14,7 +14,7 @@ contract CPRinstance is ERC20, Ownable {
   // instance vars
   string private TOKEN_NAME = "Common Pool Resource Token";
   string private TOKEN_SYMBOL = "CPRT";
-  uint256 private constant TOTAL_SUPPLY = 1200 * (uint(10) ** uint8(18));
+  uint256 private constant TOTAL_SUPPLY = 1000 * (uint(10) ** uint8(18));
   uint256 private constant PRICE = 1; // testing price
   
   // issues are used to raise awareness of an event of some kind primarily.
@@ -41,22 +41,32 @@ contract CPRinstance is ERC20, Ownable {
     bool slash; // determines if a user gets slashed or not [EXPERIMENTAL]
   }
   mapping(address=>IssueReport[]) ManagingIssueReports;
- 
+  address[] public address2dist; //to be removed, will be provided in constructor. this is for testing
   // we will feed this constructor with report data
-  constructor()ERC20(TOKEN_NAME, TOKEN_SYMBOL) {
-    _mint(address(this), TOTAL_SUPPLY);
+  constructor(
+    address[] memory _address2dist
+  )ERC20(TOKEN_NAME, TOKEN_SYMBOL) {
+    address2dist = _address2dist;
   }
 
   function mint(address to, uint256 amount) public payable onlyOwner {
     _mint(to, (amount * (uint(10) ** uint8(18))));
   }
-
+  
   // a primitive function @start which distributes shares among users
   // determined in the report, passed into the constructor.
-  function distributeShares(/*address[]*/) public onlyOwner {
-    // distribute tokens to a list of addresses. We will
-    // start simple but need to make shares dynamic. Not every
-    // person will have the same demand.
+  function distributeShares(/*address[]*/) public payable onlyOwner {
+    // in this test we will mint a total of 1000 lumber share determined via report
+    // in this simple scenario four apropiators will each recieve 20%
+    // with the remaining 20% going to the store 
+    // each address will recieve 200 CPRT
+    // the store will have 200 CPRT
+    uint rightsVal = 2000;
+    _mint(address(address2dist[uint(0)]), (TOTAL_SUPPLY / 10000 * rightsVal));
+    _mint(address(address2dist[uint(1)]), (TOTAL_SUPPLY / 10000 * rightsVal));
+    _mint(address(address2dist[uint(2)]), (TOTAL_SUPPLY / 10000 * rightsVal));
+    _mint(address(address2dist[uint(3)]), (TOTAL_SUPPLY / 10000 * rightsVal));
+    _mint(address(this), (TOTAL_SUPPLY - (address2dist.length * (TOTAL_SUPPLY / 10000 * rightsVal))));
   }
 
   // a function that allows any remaining shares to be purchased
@@ -136,4 +146,9 @@ contract CPRinstance is ERC20, Ownable {
   receive() external payable {}
 
 }
-
+// [
+//   "0x814dDd96FA03f46352c4A2C5787b4836408477fC",
+//   "0x72D1CbA159e87c017C9e9f672efBab3C2DfBfadA", 
+//   "0xFb65A9e3B18abcF21F926e1C213887369EbF75Fd",
+//   "0x816fe97D604744c793656893e9ade34e92B8f13c"
+//  ]
