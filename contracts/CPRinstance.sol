@@ -6,9 +6,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /*  2do
  [
+   random alotment function using vrf to create true random distirbutions. for certain use cases. not so much lumber. but perhaps
+ ]
+ [
    -set slash to true if conditions are met
    -invoke slash - we will use chainlink VRF to instead of burning a token give it to 
-    a random user in the system. to add insult to injury
+    a random user in the system. to add salt to the wound >:D
    -cleanup/reset params if needbe
  ]
  [
@@ -16,10 +19,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
    -we can have the option atleast
    -manage id's when removing props.
  ]
+ [
+   a function to add & remove addresses from the
+   distribution array (whtite list)
+ ]
  */
 contract CPRinstance is ERC20, Ownable {  
   //events
-  event IssueReported(Issue);
+  event IssueReported();
   event ProposalMade();
   event Voted();
   event DistributedShares();
@@ -31,10 +38,11 @@ contract CPRinstance is ERC20, Ownable {
   struct Issue {
     address issuer; // address of the user making the report
     uint issueID; // make id = array index?
-    uint voteSlash; // talley of votes for **Note still deciding on how votes work here. could be that they play into slashing
-    bool slash; // determines if a user gets slashed or not, happens when systems abused..[EXPERIMENTAL]
     bool alarmLow; // low level warning
     bool alarmHigh; // high level warning look at this now!
+    uint voteSlash; // talley of votes for **Note still deciding on how votes work here. could be that they play into slashing
+    bool slash; // determines if a user gets slashed or not, happens when systems abused..[EXPERIMENTAL]
+    address[] voted2slash;
   }
   // ** Figure out how we want to handle proposals. Most likely ipfs but do we need to tokenize them?
   // Proposals are changes to governance metrics. Such as changing
@@ -47,6 +55,8 @@ contract CPRinstance is ERC20, Ownable {
     uint nay; // talley of votes against.
     uint voteSlash; // talley of votes for **Note still deciding on how votes work here. could be that they play into slashing
     bool slash; // determines if a user gets slashed or not [EXPERIMENTAL]
+    address[] voted; // initiate with issuer address. People can't vote on their own proposals.
+    address[] voted2slash;  
   }
 
   string private TOKEN_NAME = "Common Pool Resource Token";
@@ -59,7 +69,7 @@ contract CPRinstance is ERC20, Ownable {
   address[] private address2dist; 
  
   constructor(
-    address[] memory _address2dist  // List of addresses to distribute shares too, determined in startup report.
+    address[] memory _address2dist  // List of addresses to distribute shares too, determined in report.
   ) ERC20 (TOKEN_NAME, TOKEN_SYMBOL) {
     address2dist = _address2dist;
   }
@@ -77,7 +87,7 @@ contract CPRinstance is ERC20, Ownable {
     _mint(address(this), (TOTAL_SUPPLY - (address2dist.length * (TOTAL_SUPPLY / 10000 * RIGHTS_VALUE))));
     emit DistributedShares();
   }
-
+  // ** need to explore and add rate limits **
   // a function that allows any remaining shares to be purchased
   // we'll use avax as the currency to purchase shares.
   // User enters number of shares and pays the total price in avax.
@@ -88,38 +98,66 @@ contract CPRinstance is ERC20, Ownable {
     emit PurchasedShares();
   }
 
-  // need to require the user has not already voted
+  // I want to use a map but because Id's can change unless I stamp with stomething else this maybe difficult
+  // I am using an array rn but that forces me to run loops, If I nest mapping of address to bools which would be nice maye
+  // other then potentially using alot of space for all the maps. Nesting also cause problems with passing structs as memory.
+  // **need to require the user has not already voted
   // a function for voting on things
-  function vote(uint context, address issuer, uint issueID, bool choice) public payable{
+  function vote(uint context, address issuer, uint _ID, bool choice) public payable{
       if(context == 1){ // 1 == proposal
-        if(choice == true){
-            ManagingProposals[issuer][issueID].yay++;
+      bool check = false;
+        for(int i = 0; i < int(ManagingProposals[issuer][_ID].voted.length); i++){
+            if(address(ManagingProposals[issuer][_ID].voted[uint(i)]) == address(msg.sender)){
+              check = true;
+          } 
         }
+          
+        require(check == false, "already voted");
+        if(choice == true){
+            ManagingProposals[issuer][_ID].yay++;
+            ManagingProposals[issuer][_ID].voted.push(msg.sender);
+          }
         if(choice == false){
-            ManagingProposals[issuer][issueID].nay++;
-        }
+            ManagingProposals[issuer][_ID].nay++;
+            ManagingProposals[issuer][_ID].voted.push(msg.sender);
+          }
       }
-      if(context == 2) // 2 == slash proposal
-        ManagingProposals[issuer][issueID].voteSlash++;
+
+      if(context == 2){ // 2 == slash proposal
+      bool check = false;
+        for(int i = 0; i < int(ManagingProposals[issuer][_ID].voted2slash.length); i++) 
+          if(ManagingProposals[issuer][_ID].voted2slash[uint(i)] == msg.sender)
+            check = true;
+        
+        require(check == false, "already voted");
+        ManagingProposals[issuer][_ID].voteSlash++;
+        ManagingProposals[issuer][_ID].voted2slash.push(msg.sender);
+      } 
+      
       if(context == 3){ // 3 == issue
-        if(choice == true){
-            ManagingIssues[issuer][issueID].voteSlash++;
-        }
+        bool check = false;
+        for(int i = 0; i < int(ManagingIssues[issuer][_ID].voted2slash.length); i++) 
+          if(ManagingIssues[issuer][_ID].voted2slash[uint(i)] == msg.sender)
+            check = true;
+        
+        require(check == false, "already voted");
+        ManagingIssues[issuer][_ID].voteSlash++;
+        ManagingIssues[issuer][_ID].voted2slash.push(msg.sender);
       }
     
     emit Voted();
   }
 
-   // a function to create issues which people may vote/act on the base for the openIssue public function.
   function _createIssue(Issue memory issue) internal {
     issue.issueID = ManagingIssues[issue.issuer].length;
+    issue.voted2slash[0] = issue.issuer;
     ManagingIssues[issue.issuer].push(issue); // remember we will need to adjust id's when items are removed. User don't need to be aware of this id.
-    emit IssueReported(issue);
+    emit IssueReported();
   }
 
-     // a function to create issues which people may vote/act on the base for the openIssue public function.
   function _createProposal(Proposal memory proposal) internal {
     proposal.propID = ManagingProposals[proposal.issuer].length;
+    proposal.voted[0] = proposal.issuer;
     ManagingProposals[proposal.issuer].push(proposal); // remember we will need to adjust id's when items are removed. User don't need to be aware of this id.
     emit ProposalMade();
   }
@@ -127,19 +165,22 @@ contract CPRinstance is ERC20, Ownable {
   function openIssue(
     address issuer,
     uint issueID,
+    bool alarmLow,
+    bool alarmHigh,
     uint voteSlash,
     bool slash,
-    bool alarmLow,
-    bool alarmHigh
+    address[] memory voted2slash
+   
   ) public payable {
     require(issuer == msg.sender, 'Not authorized'); // taking accountability, false flags or abuse will be punished.
     Issue memory report_issue = Issue (
       issuer,
       issueID,
+      alarmLow,
+      alarmHigh,
       voteSlash,
       slash,
-      alarmLow,
-      alarmHigh
+      voted2slash
     );
     _createIssue(report_issue);
   }
@@ -150,7 +191,9 @@ contract CPRinstance is ERC20, Ownable {
     uint yay,
     uint nay,
     uint voteSlash,
-    bool slash
+    bool slash,
+    address[] memory voted,
+    address[] memory voted2slash
   ) public payable {
     require(issuer == msg.sender, 'Not authorized'); // taking accountability, false flags or abuse will be punished.
     Proposal memory new_proposal = Proposal (
@@ -159,7 +202,9 @@ contract CPRinstance is ERC20, Ownable {
       yay,
       nay,
       voteSlash,
-      slash
+      slash,
+      voted,
+      voted2slash
     );
     _createProposal(new_proposal);
   }
