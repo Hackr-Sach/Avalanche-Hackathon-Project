@@ -6,22 +6,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /*  2do
  [
-   random alotment function using vrf to create true random distirbutions. for certain use cases. not so much lumber. but perhaps
- ]
- [
+   chainlink VRF
+   -random distriution function
+   -random appointments
    -set slash to true if conditions are met
-   -invoke slash - we will use chainlink VRF to instead of burning a token give it to 
+   -invoke slash  will use chainlink VRF to instead of burning a token give it to 
     a random user in the system. to add salt to the wound >:D
-   -cleanup/reset params if needbe
- ]
- [
-   -remove issues, remove proposals?? 
-   -we can have the option atleast
-   -manage id's when removing props.
- ]
- [
-   a function to add & remove addresses from the
-   distribution array (whtite list)
  ]
  */
 contract CPRinstance is ERC20, Ownable {  
@@ -64,10 +54,11 @@ contract CPRinstance is ERC20, Ownable {
   uint256 private constant TOTAL_SUPPLY = 1000 * (uint(10) ** uint8(18));
   uint256 private constant PRICE = 1; // testing price
   uint256 RIGHTS_VALUE = 2000; // set in constructor later
+  address[] private address2dist; 
   mapping(address=>Issue[]) private ManagingIssues;
   mapping(address=>Proposal[]) private ManagingProposals;
-  address[] private address2dist; 
- 
+  enum c {PROPOSAL, SLASH_PROP, ISSUE}
+
   constructor(
     address[] memory _address2dist  // List of addresses to distribute shares too, determined in report.
   ) ERC20 (TOKEN_NAME, TOKEN_SYMBOL) {
@@ -97,21 +88,19 @@ contract CPRinstance is ERC20, Ownable {
     this.transfer(payable(msg.sender), quantity * (uint(10) ** uint8(18)));
     emit PurchasedShares();
   }
-
+ 
   // I want to use a map but because Id's can change unless I stamp with stomething else this maybe difficult
   // I am using an array rn but that forces me to run loops, If I nest mapping of address to bools which would be nice maye
   // other then potentially using alot of space for all the maps. Nesting also cause problems with passing structs as memory.
   // **need to require the user has not already voted
   // a function for voting on things
   function vote(uint context, address issuer, uint _ID, bool choice) public payable{
-      if(context == 1){ // 1 == proposal
+      if(uint(c.PROPOSAL) == context){ 
       bool check = false;
-        for(int i = 0; i < int(ManagingProposals[issuer][_ID].voted.length); i++){
-            if(address(ManagingProposals[issuer][_ID].voted[uint(i)]) == address(msg.sender)){
+        for(int i = 0; i < int(ManagingProposals[issuer][_ID].voted.length); i++)
+            if(address(ManagingProposals[issuer][_ID].voted[uint(i)]) == address(msg.sender))
               check = true;
-          } 
-        }
-          
+        
         require(check == false, "already voted");
         if(choice == true){
             ManagingProposals[issuer][_ID].yay++;
@@ -123,7 +112,7 @@ contract CPRinstance is ERC20, Ownable {
           }
       }
 
-      if(context == 2){ // 2 == slash proposal
+      if(uint(c.SLASH_PROP) == context){
       bool check = false;
         for(int i = 0; i < int(ManagingProposals[issuer][_ID].voted2slash.length); i++) 
           if(ManagingProposals[issuer][_ID].voted2slash[uint(i)] == msg.sender)
@@ -134,7 +123,7 @@ contract CPRinstance is ERC20, Ownable {
         ManagingProposals[issuer][_ID].voted2slash.push(msg.sender);
       } 
       
-      if(context == 3){ // 3 == issue
+      if(uint(c.ISSUE) == context){ 
         bool check = false;
         for(int i = 0; i < int(ManagingIssues[issuer][_ID].voted2slash.length); i++) 
           if(ManagingIssues[issuer][_ID].voted2slash[uint(i)] == msg.sender)
@@ -219,6 +208,44 @@ contract CPRinstance is ERC20, Ownable {
   function getProposal(address issuer, uint propID) public view returns(Proposal memory){
     Proposal[] memory proposals = ManagingProposals[issuer];
     return(proposals[propID]);
+  }
+
+ //function to remove an issue or proposal
+  function removeIssueOrProp(uint context, address issuer, uint _ID) public payable {
+    require(msg.sender == issuer, "Not authorized");
+    if(uint(c.PROPOSAL) == context){
+      uint idx = ManagingProposals[issuer].length - 1;
+      ManagingProposals[issuer][_ID] = ManagingProposals[issuer][idx];
+      ManagingProposals[issuer][_ID].propID = _ID;
+      ManagingProposals[issuer].pop();
+    }
+    if(uint(c.ISSUE) == context){
+      uint idx = ManagingIssues[issuer].length - 1;
+      ManagingIssues[issuer][_ID] = ManagingIssues[issuer][idx];
+      ManagingIssues[issuer][_ID].issueID = _ID;
+      ManagingIssues[issuer].pop();
+    }
+  }
+
+  function addBenefactor(address benefactor) public payable onlyOwner returns(bool){
+    for(int i = 0; i < int(address2dist.length); i++){
+      if(address2dist[uint(i)] == benefactor){
+        return false;
+      }
+    }
+    address2dist.push(benefactor);
+    return false;
+  } 
+
+  function removeBenefactor(address user) public payable onlyOwner returns(bool){
+    for(int i = 0; i < int(address2dist.length); i++){
+      if(address2dist[uint(i)] == user){
+        address2dist[uint(i)] = address2dist[address2dist.length-1];
+        address2dist.pop();
+        return true;
+      }
+    }
+    return false;
   }
 
   //could be used in tandem with slashing
