@@ -10,7 +10,7 @@ const sleep = (ms) => {
 const ip = 'localhost';
 const port = 9650;
 const protocol = 'http';
-const networkID = 12345;
+const networkID = 43112;
 const avalanche = new avalanche_1.Avalanche(ip, port, protocol, networkID);
 const mstimeout = 3000;
 const xchain = avalanche.XChain();

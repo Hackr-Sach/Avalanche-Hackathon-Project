@@ -3,6 +3,8 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
 /*  2do
  [
@@ -12,15 +14,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
    -set slash to true if conditions are met
    -invoke slash  will use chainlink VRF to instead of burning a token give it to 
     a random user in the system. to add salt to the wound >:D
+    we could maybe invoke slash right from the vote2slash condition. if vote + current slashes breaks a threshold.
+    slash the person who made the prop
  ]
  */
-contract CPRinstance is ERC20, Ownable {  
+contract CPRinstance is ERC20, VRFConsumerBase, Ownable {  
   //events
   event IssueReported();
   event ProposalMade();
+  event ProposalPassed();
+  event ProposalRejected();
   event Voted();
   event DistributedShares();
   event PurchasedShares();
+
 
   // issues are used to raise awareness of an event of some kind primarily.
   // We can think of these as calling for everyones attention or raising the alarm.
@@ -58,11 +65,38 @@ contract CPRinstance is ERC20, Ownable {
   mapping(address=>Issue[]) private ManagingIssues;
   mapping(address=>Proposal[]) private ManagingProposals;
   enum c {PROPOSAL, SLASH_PROP, ISSUE}
+  AggregatorV3Interface internal priceFeed; // avax/usd
+  // move chainlink stuff into constructor
+  bytes32 internal keyHash;
+  uint256 internal fee;
+  uint256 public randomResult;
 
   constructor(
     address[] memory _address2dist  // List of addresses to distribute shares too, determined in report.
-  ) ERC20 (TOKEN_NAME, TOKEN_SYMBOL) {
+  ) ERC20(TOKEN_NAME, TOKEN_SYMBOL) VRFConsumerBase(
+        0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator
+        0xa36085F69e2889c224210F603D836748e7dC0088  // LINK Token
+  ) 
+  {
+    priceFeed = AggregatorV3Interface(0x5498BB86BC934c8D34FDA08E81D444153d0D06aD);
     address2dist = _address2dist;
+    keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
+    fee = 0.1 * 10 ** 18; // 0.1 LINK (Varies by network)
+  } 
+
+  /** 
+  * Requests randomness 
+  */
+  function getRandomNumber() public returns (bytes32 requestId) {
+    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
+    return requestRandomness(keyHash, fee);
+  }
+
+  /**
+  * Callback function used by VRF Coordinator
+  */
+  function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
+    randomResult = randomness;
   }
 
   function mint(address to, uint256 amount) public payable onlyOwner {
@@ -89,10 +123,9 @@ contract CPRinstance is ERC20, Ownable {
     emit PurchasedShares();
   }
  
-  // I want to use a map but because Id's can change unless I stamp with stomething else this maybe difficult
-  // I am using an array rn but that forces me to run loops, If I nest mapping of address to bools which would be nice maye
-  // other then potentially using alot of space for all the maps. Nesting also cause problems with passing structs as memory.
-  // **need to require the user has not already voted
+  // I want to use a map but introduces some complexity.
+  // loops may scale fine as most cpr comunity are relatively small with larger ones being maybe a few thousand. Not eveyone will
+  // vote on all issues/proposals so wed expect the loops to be reasonable. considering they should be good to 50,000 reads/500writes
   // a function for voting on things
   function vote(uint context, address issuer, uint _ID, bool choice) public payable{
       if(uint(c.PROPOSAL) == context){ 
@@ -237,9 +270,9 @@ contract CPRinstance is ERC20, Ownable {
     return false;
   } 
 
-  function removeBenefactor(address user) public payable onlyOwner returns(bool){
+  function removeBenefactor(address benefactor) public payable onlyOwner returns(bool){
     for(int i = 0; i < int(address2dist.length); i++){
-      if(address2dist[uint(i)] == user){
+      if(address2dist[uint(i)] == benefactor){
         address2dist[uint(i)] = address2dist[address2dist.length-1];
         address2dist.pop();
         return true;
@@ -248,7 +281,11 @@ contract CPRinstance is ERC20, Ownable {
     return false;
   }
 
-  //could be used in tandem with slashing
+  // EXPERIMENTAL
+  function _slash(address user) internal {
+
+  }
+
   function burn(address from, uint256 amount) public onlyOwner {
     _burn(from, amount);
   }
@@ -258,11 +295,18 @@ contract CPRinstance is ERC20, Ownable {
     // set roles if any
   }
 
+  function getLatestPrice() public view returns (int) {
+    (,int price,,,) = priceFeed.latestRoundData();
+    return price;
+  }
+
   // a testing function to releaase avax stored on contract.
   function releaseAVAX(uint amount) public payable onlyOwner{
     (bool succeed, bytes memory data) = payable(msg.sender).call{value: amount}("");
     require(succeed, "Failed to withdraw AVAX");
   }
+
+  function releaseLink() external {} //todo
 
   function setMyAllowance(address spender, uint addedValue) public {
     increaseAllowance(spender, addedValue);
