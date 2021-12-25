@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BSD 3-Clause
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
+// note* We will track users of a cpr using the benefactor array.
 /*  2do
  [
    chainlink VRF
@@ -61,7 +62,7 @@ contract CPRinstance is ERC20, VRFConsumerBase, Ownable {
   uint256 private constant TOTAL_SUPPLY = 1000 * (uint(10) ** uint8(18));
   uint256 private constant PRICE = 1; // testing price
   uint256 RIGHTS_VALUE = 2000; // set in constructor later
-  address[] private address2dist; 
+  address[] public benefactor; 
   mapping(address=>Issue[]) private ManagingIssues;
   mapping(address=>Proposal[]) private ManagingProposals;
   enum c {PROPOSAL, SLASH_PROP, ISSUE}
@@ -79,7 +80,7 @@ contract CPRinstance is ERC20, VRFConsumerBase, Ownable {
   ) 
   {
     priceFeed = AggregatorV3Interface(0x5498BB86BC934c8D34FDA08E81D444153d0D06aD);
-    address2dist = _address2dist;
+    benefactor = _address2dist;
     keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
     fee = 0.1 * 10 ** 18; // 0.1 LINK (Varies by network)
   } 
@@ -106,10 +107,10 @@ contract CPRinstance is ERC20, VRFConsumerBase, Ownable {
   // a primitive function @start which distributes shares among users
   // determined in the report, passed into the constructor.
   function distributeShares() public payable onlyOwner {
-    for(int i = 0; i < int(address2dist.length); i++){
-      _mint(address(address2dist[uint(i)]), (TOTAL_SUPPLY / 10000 * RIGHTS_VALUE));
+    for(int i = 0; i < int(benefactor.length); i++){
+      _mint(address(benefactor[uint(i)]), (TOTAL_SUPPLY / 10000 * RIGHTS_VALUE));
     }
-    _mint(address(this), (TOTAL_SUPPLY - (address2dist.length * (TOTAL_SUPPLY / 10000 * RIGHTS_VALUE))));
+    _mint(address(this), (TOTAL_SUPPLY - (benefactor.length * (TOTAL_SUPPLY / 10000 * RIGHTS_VALUE))));
     emit DistributedShares();
   }
   // ** need to explore and add rate limits **
@@ -260,21 +261,21 @@ contract CPRinstance is ERC20, VRFConsumerBase, Ownable {
     }
   }
 
-  function addBenefactor(address benefactor) public payable onlyOwner returns(bool){
-    for(int i = 0; i < int(address2dist.length); i++){
-      if(address2dist[uint(i)] == benefactor){
+  function addBenefactor(address _benefactor) public payable onlyOwner returns(bool){
+    for(int i = 0; i < int(benefactor.length); i++){
+      if(benefactor[uint(i)] == _benefactor){
         return false;
       }
     }
-    address2dist.push(benefactor);
+    benefactor.push(_benefactor);
     return false;
   } 
 
-  function removeBenefactor(address benefactor) public payable onlyOwner returns(bool){
-    for(int i = 0; i < int(address2dist.length); i++){
-      if(address2dist[uint(i)] == benefactor){
-        address2dist[uint(i)] = address2dist[address2dist.length-1];
-        address2dist.pop();
+  function removeBenefactor(address _benefactor) public payable onlyOwner returns(bool){
+    for(int i = 0; i < int(benefactor.length); i++){
+      if(benefactor[uint(i)] == _benefactor){
+        benefactor[uint(i)] = benefactor[benefactor.length-1];
+        benefactor.pop();
         return true;
       }
     }

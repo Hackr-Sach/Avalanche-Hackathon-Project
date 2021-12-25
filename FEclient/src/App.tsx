@@ -2,7 +2,7 @@ import {Button, Container} from 'react-bootstrap';
 import { useMoralis } from 'react-moralis';
 import { Avalanche } from "avalanche";
 import { Auth } from './Auth';
-
+import { Dashboard } from './Dashboard';
 
 function App() {
   const { isAuthenticated, logout } = useMoralis();
@@ -11,8 +11,8 @@ function App() {
     return (
       <div id="app-inner">
         <Container>
-          <h1>Commons dashboard</h1>
           <Button onClick={() => logout()}>Logout</Button>
+          <Dashboard />
         </Container>
       </div>
     );
@@ -25,6 +25,7 @@ function App() {
           Welcome - Log in or sign up
         </h1>
         <Button>Login</Button>
+        
         <Auth />
       </Container>
     </div>
