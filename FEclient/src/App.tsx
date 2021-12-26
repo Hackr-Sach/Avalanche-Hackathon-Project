@@ -19,15 +19,8 @@ function App() {
   }
 
   return (
-    <div id="app-inner">
-      <Container>
-        <h1>
-          Welcome - Log in or sign up
-        </h1>
-        <Button>Login</Button>
-        
+    <div id="app-inner">  
         <Auth />
-      </Container>
     </div>
   );
 }

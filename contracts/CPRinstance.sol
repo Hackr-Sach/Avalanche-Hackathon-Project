@@ -268,7 +268,7 @@ contract CPRinstance is ERC20, VRFConsumerBase, Ownable {
       }
     }
     benefactor.push(_benefactor);
-    return false;
+    return true;
   } 
 
   function removeBenefactor(address _benefactor) public payable onlyOwner returns(bool){
