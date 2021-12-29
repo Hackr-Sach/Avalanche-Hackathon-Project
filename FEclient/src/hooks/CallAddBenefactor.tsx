@@ -2,22 +2,22 @@ import  {useMoralis} from "react-moralis";
 import CPRinstance from "../abi/CPRinstance.json";
 import { useState } from "react";
 
-export const useAddBenefactor = (contractAddress: string, benefactor: string) => {
+export const useAddBenefactor = (contractAddress: string, _benefactor: string) => {
   const {Moralis} = useMoralis()
   const[benefactorKeyState, setBenefactorKeyState] = useState<any>({status: "create an address"})
   const {abi} = CPRinstance;
-
+  console.log(_benefactor)
   const handleAddBenefactor = async () => {
-    
-    setBenefactorKeyState({status: "creating new keys"})
-    
+    setBenefactorKeyState({status: "creating new keys"});
+    console.log(_benefactor)
+    console.log(contractAddress)
     const opts = {
-      chain: "43112",
+      chain: "43113",
       contractAddress: contractAddress,
       functionName: "addBenefactor",
-      params: {benefactor},
+      params: {benefactor: _benefactor},
       abi: abi,
-      msgValue: "1"  
+      msgValue: "2"  
     }
 
     const addBenefactor = await (Moralis as any).executeFunction(opts)
@@ -28,7 +28,7 @@ export const useAddBenefactor = (contractAddress: string, benefactor: string) =>
     });
 
     if(addBenefactor != null || undefined)
-    setBenefactorKeyState({status: "done"})
+      setBenefactorKeyState({status: "done"});
   } 
 return {handleAddBenefactor, benefactorKeyState} 
 }
