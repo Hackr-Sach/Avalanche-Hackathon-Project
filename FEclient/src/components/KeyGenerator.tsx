@@ -20,6 +20,7 @@ export const BenefactorKeyGen = () => {
     const c_KeyChain = cchain.keyChain()
     //deploy args
     let testPerson = ["0x72D1CbA159e87c017C9e9f672efBab3C2DfBfadA"]; 
+
     const deployCPR  = () => {
         const web3 = new Web3(Web3.givenProvider || 'http://localhost:9650');
         const Contract = new web3.eth.Contract((CPRinstance.abi as any));
@@ -27,10 +28,10 @@ export const BenefactorKeyGen = () => {
             data: CPRinstance.bytecode,
             arguments:[testPerson],
         }).send({
-            from: '0x814dDd96FA03f46352c4A2C5787b4836408477fC',
+            from: key2add ? key2add : '0x814dDd96FA03f46352c4A2C5787b4836408477fC', // ill need a dynamic arr to old multiple initial benefactors
             gas: 6596670,
             gasPrice: '25000000000'
-        },(error, transactionHash) => { })
+        },(error, transactionHash) => {})
         .on('error', (error) => {console.log(error)})
         .on('transactionHash', (transactionHash) => {console.log(transactionHash)})
         .on('receipt', (receipt) => {
@@ -39,7 +40,7 @@ export const BenefactorKeyGen = () => {
         .on('confirmation', (confirmationNumber, receipt) => { console.log(
             "number: " + confirmationNumber + " receipt: " + receipt
         ) })
-        .then(function(newContractInstance){
+        .then(newContractInstance =>{
             console.log(newContractInstance.options.address) // instance with the new contract address
         });
 
@@ -47,28 +48,20 @@ export const BenefactorKeyGen = () => {
     }
     
 
-    let newBenefactorKey:any;
-    let benefactor:any;
-
     const makeKey = () => {
-        newBenefactorKey = c_KeyChain.makeKey();
-        console.log(newBenefactorKey.getAddressString() )
-        console.log(newBenefactorKey.getPublicKeyString())
-        console.log(binTools.cb58Encode(newBenefactorKey.getPrivateKey()))
-        benefactor = binTools.cb58Encode(newBenefactorKey.getPublicKey())
-        console.log(benefactor)
-        setKey2add(benefactor)
+        let tmpKeys:any = c_KeyChain.makeKey();
+        let tmp = Web3.utils.keccak256(tmpKeys.getPublicKey());
+        tmp = "0x" + tmp.slice(tmp.length - 40, tmp.length);
+        setKey2add(tmp);
     }
 
     //
     const importKey = () => {
         let _pk = binTools.stringToBuffer("0x9f376d3e972c18b4479497eb7d3d501f661126817c104ec1d6b03bb76c5fffb4"); 
-        newBenefactorKey = c_KeyChain.importKey(_pk);
-        console.log(binTools.cb58Encode(newBenefactorKey.getPublicKey()))
-        console.log(binTools.cb58Encode(newBenefactorKey.getPrivateKey()))
-        benefactor = binTools.cb58Encode(newBenefactorKey.getPublicKey())
-        console.log(benefactor)
-        setKey2add(benefactor)
+        let tmpKeys:any  = c_KeyChain.importKey(_pk);
+        let tmp = Web3.utils.keccak256(tmpKeys.getPrivateKey());
+        tmp = "0x" + tmp.slice(tmp.length - 40, tmp.length);
+        setKey2add(tmp);
     }
     
     
