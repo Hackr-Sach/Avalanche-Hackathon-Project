@@ -2,7 +2,7 @@ import { Input } from 'avalanche/dist/common';
 import React, { useState, useEffect} from 'react';
 import {Container, Button, Alert, InputGroup, FormControl} from 'react-bootstrap';
 import { useMoralis, AuthError} from 'react-moralis';
-import { BuyCrypto } from './components/BuyCrptoBtn';
+import { BuyCrypto } from './BuyCrptoBtn';
 
 
 export const Auth = () => {

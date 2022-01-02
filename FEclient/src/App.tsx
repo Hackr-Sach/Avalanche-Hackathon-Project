@@ -1,8 +1,8 @@
 import {Button, Container} from 'react-bootstrap';
 import { useMoralis } from 'react-moralis';
 import { Avalanche } from "avalanche";
-import { Auth } from './Auth';
-import { Dashboard } from './Dashboard';
+import { Auth } from './components/Auth';
+import { Dashboard } from './components/Dashboard';
 
 function App() {
   const { isAuthenticated, logout } = useMoralis();
