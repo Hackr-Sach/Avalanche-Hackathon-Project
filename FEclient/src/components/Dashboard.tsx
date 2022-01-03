@@ -1,8 +1,6 @@
 import {Button, Container} from 'react-bootstrap';
-import { useMoralis } from 'react-moralis';
-import { Avalanche, BinTools, Buffer} from "avalanche";
 import { BenefactorKeyGen } from '../features/keys/KeyGenerator';
-import { CPR_Report } from './Report';
+import { InitInstance } from './deployInstance';
 
 // hook into a benefactors[] state and use this. 
 
@@ -11,10 +9,16 @@ export const Dashboard = () => {
 
     return(
         <Container>
-            <h4>"CPR dashboard"</h4>
-            <BenefactorKeyGen />
-            <CPR_Report />
-            {/* <Button onClick={deployCPR}>deploy cpr contract</Button> */}
+            <h4 style={{paddingLeft: '25%'}}>"CPR dashboard"</h4>
+            <a href='/make_report' style={{paddingLeft: '66%'}}>
+                <Button type="button">fill out report</Button>
+            </a>
+            <Container style={{paddingLeft: '25%'}}>
+                <BenefactorKeyGen />
+            </Container>
+            <Container style={{paddingLeft: '25%'}}>
+                <InitInstance />
+            </Container>   
         </Container>
     )
 }

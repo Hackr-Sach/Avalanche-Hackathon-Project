@@ -6,6 +6,8 @@ import App from "./App";
 import { BrowserRouter, Route, Switch} from "react-router-dom";
 import { TryOutAvalancheJs } from "./avalanche_examples/workingWithAvalancheJS";
 import { Provider } from "react-redux";
+import { InitInstance } from "./components/deployInstance";
+import { CPR_Report } from "./components/Report";
 
 const appId = process.env.REACT_APP_MORALIS_APP_ID!;
 const serverUrl = process.env.REACT_APP_MORALIS_SERVER_URL!;
@@ -18,7 +20,8 @@ ReactDOM.render(
           <Switch>
             {/* <div id="app-wrapper"> */}
             <Route exact path="/" component={App}/>
-            <Route exact path="/test" component={TryOutAvalancheJs}/>
+            <Route exact path="/make_report" component={CPR_Report}/>
+            <Route exact path="/test" component={InitInstance}/>
             {/* </div> */}
           </Switch>
         </BrowserRouter>
@@ -27,3 +30,4 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById("root"),
 );
+// <initInstance />

@@ -1,15 +1,6 @@
     import { createSlice } from "@reduxjs/toolkit";
 
-    const initialState = [
-        { 
-          address: '0xoyugb7iy...',
-          pubK: '087togho86f....'
-        },
-        { 
-          address: '0xo6riy...',
-          pubK: 'f9oiygdrftg...'
-        }
-      ]
+    const initialState = [""]
       
 
     const keysSlice = createSlice({
@@ -20,13 +11,8 @@
                 reducer(state: any, action: any){
                   state.push(action.payload);
                 },
-                prepare(address, pubK){
-                    return{
-                        payload: {
-                            address,
-                            pubK
-                        }
-                    }
+                prepare(address){
+                    return {payload: address}
                 }
             },
             // add reducers

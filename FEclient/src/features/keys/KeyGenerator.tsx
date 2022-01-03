@@ -15,6 +15,7 @@ export const BenefactorKeyGen = () => {
 
     const[address, setAddress] = useState<any>("");
     const[pubKey, setPubKey] = useState<any>("");
+    const[appropriators, setAppropriators] = useState<any>([]);
 
     const binTools = BinTools.getInstance();
     const _netWorkID = 43112;
@@ -22,7 +23,7 @@ export const BenefactorKeyGen = () => {
     const cchain = avalanche.CChain()
     const c_KeyChain = cchain.keyChain()
  
-//2do
+//2do 
 // need to save the appropiate addresses in an array to be accessed in deploy.
     const makeKey = () => {
         let tmpKeys:any = c_KeyChain.makeKey();
@@ -31,6 +32,9 @@ export const BenefactorKeyGen = () => {
         tmp = Web3.utils.keccak256(tmpKeys.getPublicKey());
         tmp = "0x" + tmp.slice(tmp.length - 40, tmp.length);
         setAddress(tmp);
+        let atmp = appropriators.slice();
+        atmp.push(tmp);
+        setAppropriators(atmp);
     }
 
     //
@@ -42,10 +46,17 @@ export const BenefactorKeyGen = () => {
         let addr = Web3.utils.keccak256(tmpKeys.getPrivateKey());
         addr = "0x" + pubk.slice(pubk.length - 40, pubk.length);
         setAddress(addr);
+        let atmp = appropriators.slice();
+        atmp.push(addr);
+        setAppropriators(atmp);
     }
-    const saveKeys = () => {
-        if(address && pubKey){
-            dispatch(keysAdded(address, pubKey));
+    
+
+    const addAppropriators2Report = () =>{
+        //let tmp = new Array(appropriators.length + 1);
+        console.log(appropriators)
+        if(appropriators){
+            dispatch(keysAdded(appropriators));
             setPubKey("");
             setAddress("");
         }
@@ -63,13 +74,14 @@ export const BenefactorKeyGen = () => {
    
     return(
         <div>
-            <h2>KEYGEN</h2>
-            <p>"Create key"</p>
-            <Button onClick={makeKey}>Make Key</Button>
-            <p>"Import private key"</p>
-            <Button onClick={importKey}>Import Key</Button>
-            <Button onClick={handleAddBenefactor}>Add Benefactor</Button>
-            <Button onClick={saveKeys}>save state</Button>
+            <div style={{paddingLeft: '55%'}}>
+                <p>Your current address: {address}</p>
+                <p>Your current public key: {pubKey}</p>
+            </div>
+            Create key <Button onClick={makeKey}>Make Key</Button> <br />
+            Import private key <Button onClick={importKey}>Import Key</Button> <br />
+            <Button onClick={handleAddBenefactor}>Add Benefactor</Button> <br />
+            <Button onClick={addAppropriators2Report}>add appropriator to report</Button>
             
         </div>
         
